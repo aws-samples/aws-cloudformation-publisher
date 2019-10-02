@@ -1,0 +1,39 @@
+language: python
+
+python: 
+  - "3.7"
+
+before_script:
+  - python --version
+  - pip install cfn-lint
+
+script:
+  - cfn-lint cfn.template
+
+before_deploy:
+  - LATEST_VERSION="$(git describe --abbrev=0 --tags 2> /dev/null || echo 'v0')"
+  - NEXT_VERSION="v$((${LATEST_VERSION##*[^0-9]} + 1 ))"
+  - export VERSION=${TRAVIS_TAG:-$NEXT_VERSION}
+  - echo "Deploying version $VERSION"
+  - git archive HEAD -o $VERSION.zip
+  - if [ -z "$TRAVIS_TAG" ]; then git tag $VERSION; fi
+
+deploy:
+  - provider: releases
+    api_key: 
+      secure: TODO
+    file: $VERSION.zip
+    skip_cleanup: true
+    on:
+      branch: master
+      condition: type != pull_request
+  - provider: script
+    script: aws s3 cp ./$VERSION.zip s3://$CFN_BUCKET/cfn-publish/$VERSION/cfn-publish.zip
+    skip_cleanup: true
+    on:
+      tags: true
+
+notifications:
+  email: false
+
+cache: pip
