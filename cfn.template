@@ -148,6 +148,9 @@ Resources:
                   fi
 
                 - |
+                  cat >> publish.sh <<EOL
+                  #!/bin/bash
+                  set -e
                   for region in $regions; do
                     echo Publishing to $region...
                     export AWS_DEFAULT_REGION=$region
@@ -196,3 +199,6 @@ Resources:
 
                     echo "https://${!BUCKET}.s3-website-${!region}.amazonaws.com/${!project}/$version/index.html"
                   done
+                  EOL
+                - chmod +x publish.sh
+                - ./publish.sh
