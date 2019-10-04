@@ -2,6 +2,8 @@
 
 AWS CloudFormation Publisher packages your CloudFormation templates into an S3 bucket in every AWS region and creates "launch stack" links that you can use in your documentation so that your customers can easily launch stacks in their AWS accounts from your CloudFormation template.
 
+[![Build Status](https://travis-ci.org/aws-samples/aws-cloudformation-publisher.svg?branch=master)](https://travis-ci.org/aws-samples/aws-cloudformation-publisher)
+
 ## Overview
 
 AWS CloudFormation Publisher packages your CloudFormation templates into an S3 bucket in every AWS region through a CodeBuild project which, when you start a build, can be overridden to point at your project's source location.
