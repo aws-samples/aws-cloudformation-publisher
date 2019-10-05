@@ -1,4 +1,4 @@
-Description: cfn-publish
+Description: AWS CloudFormation Publisher packages your CloudFormation templates into an S3 bucket in every AWS region (uksb-1q29miumr)
 
 Resources:
   Role:
