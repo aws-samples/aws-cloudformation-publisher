@@ -28,7 +28,7 @@ deploy:
       branch: master
       condition: type != pull_request
   - provider: script
-    script: aws s3 cp ./$VERSION.zip s3://$CFN_BUCKET/cfn-publish/$VERSION/cfn-publish.zip
+    script: aws s3 cp ./$VERSION.zip s3://$CFN_BUCKET/aws-cloudformation-publisher/$VERSION/aws-cloudformation-publisher.zip
     skip_cleanup: true
     on:
       tags: true
