@@ -30,7 +30,7 @@ To deploy, launch CloudFormation template into your account:
 |**Asia Pacific (Sydney)** (ap-southeast-2) | [![Launch the aws-cloudformation-publisher Stack with CloudFormation](docs/deploy-to-aws.png)](https://console.aws.amazon.com/cloudformation/home?region=ap-southeast-2#/stacks/new?stackName=aws-cloudformation-publisher&templateURL=https://solution-builders-ap-southeast-2.s3.ap-southeast-2.amazonaws.com/aws-cloudformation-publisher/latest/main.template)|
 
 <details>
-  <summary>Other regions</summary>
+  <summary>More regions</summary>
   
 |Region|Launch Template|
 |------|---------------|
