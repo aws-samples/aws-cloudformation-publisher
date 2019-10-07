@@ -115,23 +115,23 @@ Resources:
       ServiceRole: !GetAtt Role.Arn
       Source:
         Type: NO_SOURCE
-        BuildSpec: !Sub |
+        BuildSpec: |
           version: 0.2
 
           phases:
             build:
               commands:
-                - REPO_NAME=$(basename $CODEBUILD_SOURCE_REPO_URL)
-                - project=${!REPO_NAME%.*}
-                - version=${!VERSION:-latest}
+                - REPO_NAME=$(basename "$CODEBUILD_SOURCE_REPO_URL")
+                - project="${REPO_NAME%.*}"
+                - version="${VERSION:-latest}"
                 - echo Building $project...
 
                 - echo Getting account number...
-                - account=$(aws sts get-caller-identity --output text --query Account)
+                - account="$(aws sts get-caller-identity --output text --query Account)"
 
                 - template=cfn.template
                 - regions=""
-                - bucket_name_prefix="cfn-${!account}"
+                - bucket_name_prefix="cfn-$account"
                 - acl="private"
                 - extra_files=""
 
@@ -152,52 +152,52 @@ Resources:
                   #!/bin/bash
                   set -e
                   for region in $regions; do
-                    echo Publishing to $region...
-                    export AWS_DEFAULT_REGION=$region
-                    export BUCKET="${!bucket_name_prefix}-${!region}"
+                    echo Publishing to "$region"...
+                    export AWS_DEFAULT_REGION="$region"
+                    export BUCKET="${bucket_name_prefix}-${region}"
 
                     # Make the bucket if it doesn't exist
-                    aws s3api head-bucket --bucket $BUCKET 2>/dev/null || aws s3 mb s3://$BUCKET &>/dev/null
+                    aws s3api head-bucket --bucket "$BUCKET" 2>/dev/null || aws s3 mb "s3://$BUCKET" &>/dev/null
 
                     # Give the bucket time to existify
-                    aws s3api wait bucket-exists --bucket $BUCKET
+                    aws s3api wait bucket-exists --bucket "$BUCKET"
 
                     # Make sure it can host websites
-                    aws s3api put-bucket-website --bucket $BUCKET --website-configuration '{"IndexDocument": {"Suffix": "index.html"}}'
+                    aws s3api put-bucket-website --bucket "$BUCKET" --website-configuration '{"IndexDocument": {"Suffix": "index.html"}}'
 
                     # Clear existing files
-                    echo Clearing existing files for version: $version
-                    aws s3 rm --recursive s3://$BUCKET/$project/$version
+                    echo Clearing existing files for version: "$version"
+                    aws s3 rm --recursive "s3://${BUCKET}/${project}/${version}"
 
                     # Package the template
-                    aws cloudformation package --template-file $template --s3-bucket $BUCKET --s3-prefix $project/$version --output-template-file packaged.template
+                    aws cloudformation package --template-file "$template" --s3-bucket "$BUCKET" --s3-prefix "${project}/${version}" --output-template-file packaged.template
 
                     # Copy it to the bucket
-                    aws s3 cp --acl $acl packaged.template s3://$BUCKET/${!project}/$version/main.template
+                    aws s3 cp --acl "$acl" packaged.template "s3://${BUCKET}/${project}/${version}/main.template"
 
-                    url="https://s3.amazonaws.com/${!BUCKET}/${!project}/$version/main.template"
+                    url="https://s3.amazonaws.com/${BUCKET}/${project}/${version}/main.template"
 
                     # Add an index
-                    echo "<!DOCTYPE html><html lang=\"en\"><body><p><a href=\"https://console.aws.amazon.com/cloudformation/home?region=${!region}#/stacks/new?stackName=${!project}&templateURL=${!url}\"><img alt=\"Launch Stack\" src=\"https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png\" /></a></p></body></html>" >index.html
-                    aws s3 cp --acl $acl index.html s3://$BUCKET/${!project}/$version/index.html
+                    echo "<!DOCTYPE html><html lang=\"en\"><body><p><a href=\"https://console.aws.amazon.com/cloudformation/home?region=${region}#/stacks/new?stackName=${project}&templateURL=${url}\"><img alt=\"Launch Stack\" src=\"https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png\" /></a></p></body></html>" >index.html
+                    aws s3 cp --acl "$acl" index.html "s3://${BUCKET}/${project}/${version}/index.html"
 
                     # Add extra files
                     for extra_file in $extra_files; do
-                      aws s3 cp --acl $acl ${!extra_file} s3://$BUCKET/${!project}/$version/${!extra_file}
+                      aws s3 cp --acl "$acl" "$extra_file" "s3://${BUCKET}/${project}/${version}/${extra_file}"
                     done
 
                     # Set permissions of artefacts
-                    objects=$(aws s3 ls --recursive s3://$BUCKET/$project/$version)
+                    objects=$(aws s3 ls --recursive "s3://${BUCKET}/${project}/${version}")
                     echo "$objects" | awk -v bucket="$BUCKET" -v acl="$acl" '{system("aws s3api put-object-acl --bucket " bucket " --key " $4 " --acl " acl)}'
 
                     # Sync to latest
                     if [ "$version" != "latest" ]; then
                       echo "Syncing $version to latest"
-                      aws s3 rm --recursive "s3://$BUCKET/$project/latest"
-                      aws s3 cp --acl "$acl" "s3://$BUCKET/$project/$version/main.template" "s3://$BUCKET/$project/latest/main.template"
+                      aws s3 rm --recursive "s3://${BUCKET}/${project}/{latest}"
+                      aws s3 cp --acl "$acl" "s3://${BUCKET}/${project}/${version}/main.template" "s3://${BUCKET}/${project}/latest/main.template"
                     fi
 
-                    echo "https://${!BUCKET}.s3-website-${!region}.amazonaws.com/${!project}/$version/index.html"
+                    echo "https://${BUCKET}.s3-website-${region}.amazonaws.com/${project}/$version/index.html"
                   done
                   EOL
                 - chmod +x publish.sh
