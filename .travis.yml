@@ -5,7 +5,7 @@ python:
 
 before_script:
   - python --version
-  - pip install cfn-lint
+  - pip install -r requirements.txt
 
 script:
   - cfn-lint cfn.template

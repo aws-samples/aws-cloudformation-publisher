@@ -1,0 +1,3 @@
+awscli~=1.16
+cfn-lint~=0.22
+

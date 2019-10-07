@@ -148,7 +148,7 @@ Resources:
                   fi
 
                 - |
-                  cat >> publish.sh <<EOL
+                  cat >> publish.sh << 'EOL'
                   #!/bin/bash
                   set -e
                   for region in $regions; do
@@ -201,4 +201,4 @@ Resources:
                   done
                   EOL
                 - chmod +x publish.sh
-                - ./publish.sh
+                - . ./publish.sh
