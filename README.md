@@ -1,6 +1,6 @@
 ## AWS Cloudformation Publisher
 
-AWS CloudFormation Publisher packages your CloudFormation templates into an S3 bucket in every AWS region and creates "launch stack" links that you can use in your documentation so that your customers can easily launch stacks in their AWS accounts from your CloudFormation template.
+AWS CloudFormation Publisher packages your CloudFormation templates into an S3 bucket in every AWS region and creates "launch stack" links that you can use in your documentation so that your customers can easily launch stacks in their AWS accounts from your CloudFormation templates.
 
 [![Build Status](https://travis-ci.org/aws-samples/aws-cloudformation-publisher.svg?branch=master)](https://travis-ci.org/aws-samples/aws-cloudformation-publisher)
 
@@ -14,11 +14,11 @@ AWS CloudFormation Publisher creates S3 buckets for each region in your account.
 
 For example: `cfn-0123456789012-us-east-1`
 
-Your projects' CloudFormation templates will be stored as `{project name}/${version}/main.template`.
+Your projects' CloudFormation templates will be stored as `{project name}/{version}/{template}`.
 
 ## Installation
 
-To deploy, launch CloudFormation template into your account:
+To deploy, launch the AWS Cloudformation Publisher into your account:
 
 |Region|Launch Template|
 |------|---------------|
@@ -51,7 +51,7 @@ This will create a CodeBuild project named `cfn-publish` in your account.
 ## Configuration
 
 AWS CloudFormation Publisher looks for a file in the root of your repository called `cfn-publish.config` which can be used to override:
-* The location of the CloudFormation template in the repository that you wish to publish (the default is `cfn.template`)
+* The location of the CloudFormation template(s) in the repository that you wish to publish (the default is a single template called `cfn.template`)
 * The regions to publish to (the default is all regions)
 * The prefix to use in bucket names (the default is `cfn-<aws_account_id>`)
 * The ACL to use for uploaded artefacts (the default is `private` i.e. only IAM principals in your account who have explicitly been granted access to the bucket can launch the template) 
@@ -59,7 +59,7 @@ AWS CloudFormation Publisher looks for a file in the root of your repository cal
 
 Your `cfn-publish.config`, if you need one, should look something like this:
 ```
-template="main.template"
+templates="first.template second.template"
 regions="eu-west-1 eu-west-2 eu-central-1"
 bucket_name_prefix="my-custom-prefix"
 acl="private"
@@ -69,7 +69,7 @@ extra_files="backend.zip frontend.zip"
 
 ## Usage
 
-To publish your repository's CloudFormation template, take the following steps:
+To publish your repository's CloudFormation templates, take the following steps:
 
 * Open the [CodeBuild console](https://console.aws.amazon.com/codesuite/codebuild/projects/)
 * Select the `cfn-publish` project
@@ -78,7 +78,7 @@ To publish your repository's CloudFormation template, take the following steps:
 * Configure the "Source" section
 * Press "Start build"
 
-You will see the bucket and template names in the build output.
+You will see the S3 bucket and output CloudFormation template names in the build output.
 
 ## Notifications
 
@@ -91,7 +91,7 @@ Publication of '<SOURCE_LOCATION>' has reached the status '<SUCCEEDED|FAILED|IN_
 
 ## Versioning
 
-The publisher will look for the environment variable VERSION to determine which version to use in the object key. If the VERSION is set, `main.template` from the **most recent** execution will be available at both `{project name}/{version}/main.template` and `{project name}/latest/main.template`. If the VERSION is not set, then it will only be available at `{project name}/latest/main.template`.
+The publisher will look for the environment variable VERSION to determine which version to use in the object key. If the VERSION is set, templates from the **most recent** execution will be available at both `{project name}/{version}/{template}` and `{project name}/latest/{template}`. If the VERSION is not set, then templates will only be published at `{project name}/latest/{template}`.
 
 Before publishing a version, the publisher will first wipe any existing files it finds for that version from the S3 buckets.
 
