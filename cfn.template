@@ -257,7 +257,8 @@ Resources:
                   EOF
 
                     for template in $templates; do
-                      name="${template%.*}"
+                      # Strip disallowed cfn stack name characters
+                      name=$(echo "${project}-${template%.*}" | sed -e 's/[^a-zA-Z0-9]\+/-/g')
                       url="https://s3.amazonaws.com/${BUCKET}/${project}/${version}/$(basename $template)"
 
                       cat <<EOF >>index.html
