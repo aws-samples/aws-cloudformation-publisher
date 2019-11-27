@@ -129,7 +129,6 @@ Resources:
                 - echo Getting account number...
                 - account="$(aws sts get-caller-identity --output text --query Account)"
 
-                - templates="cfn.template"
                 - regions=""
                 - bucket_name_prefix="cfn-$account"
                 - acl="private"
@@ -147,10 +146,14 @@ Resources:
                     regions=$(aws ec2 describe-regions --output text --query 'Regions[].RegionName')
                   fi
 
-                - # Deal with either "template" or "templates"
+                - # Handle "templates" or "template" variable
                 - |
-                  if [ -n "$template" ]; then
+                  if [ -z "$templates" ]; then
+                    if [ -n "$template" ]; then
                       templates="$template"
+                    else
+                      templates="cfn.template"
+                    fi
                   fi
 
                 - |
