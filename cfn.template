@@ -78,21 +78,21 @@ Resources:
       Topics:
         - !Ref StatusTopic
 
-  PublishEventRule: 
+  PublishEventRule:
     Type: AWS::Events::Rule
-    Properties: 
+    Properties:
       Description: CFN Publish build status notifier
-      EventPattern: 
+      EventPattern:
         source:
           - "aws.codebuild"
-        detail-type: 
+        detail-type:
           - "CodeBuild Build State Change"
         detail:
-          project-name: 
+          project-name:
             - !Ref Project
       State: "ENABLED"
-      Targets: 
-        - 
+      Targets:
+        -
           Arn: !Ref "StatusTopic"
           Id: "StatusTopic"
           InputTransformer:
@@ -129,7 +129,6 @@ Resources:
                 - echo Getting account number...
                 - account="$(aws sts get-caller-identity --output text --query Account)"
 
-                - template=cfn.template
                 - regions=""
                 - bucket_name_prefix="cfn-$account"
                 - acl="private"
@@ -147,39 +146,55 @@ Resources:
                     regions=$(aws ec2 describe-regions --output text --query 'Regions[].RegionName')
                   fi
 
+                - # Handle "templates" or "template" variable
                 - |
-                  cat >> publish.sh << 'EOL'
+                  if [ -z "$templates" ]; then
+                    if [ -n "$template" ]; then
+                      templates="$template"
+                    else
+                      templates="cfn.template"
+                    fi
+                  fi
+
+                - |
+                  cat <<"EOL" >publish.sh
                   #!/bin/bash
                   set -e
+                  set -x
+                  # Loop through regions
                   for region in $regions; do
                     echo Publishing to "$region"...
                     export AWS_DEFAULT_REGION="$region"
                     export BUCKET="${bucket_name_prefix}-${region}"
 
                     # Make the bucket if it doesn't exist
-                    aws s3api head-bucket --bucket "$BUCKET" 2>/dev/null || aws s3 mb "s3://$BUCKET" &>/dev/null
+                    aws s3api head-bucket --bucket "$BUCKET" 2>/dev/null || aws s3 mb "s3://$BUCKET"
 
                     # Give the bucket time to existify
                     aws s3api wait bucket-exists --bucket "$BUCKET"
-
-                    # Make sure it can host websites
-                    aws s3api put-bucket-website --bucket "$BUCKET" --website-configuration '{"IndexDocument": {"Suffix": "index.html"}}'
 
                     # Clear existing files
                     echo Clearing existing files for version: "$version"
                     aws s3 rm --recursive "s3://${BUCKET}/${project}/${version}"
 
-                    # Package the template
-                    aws cloudformation package --template-file "$template" --s3-bucket "$BUCKET" --s3-prefix "${project}/${version}" --output-template-file packaged.template
+                    # Loop through templates
+                    for template in $templates; do
+                      # Package the template
+                      aws cloudformation package --template-file "$template" --s3-bucket "$BUCKET" --s3-prefix "${project}/${version}" --output-template-file packaged.template
 
-                    # Copy it to the bucket
-                    aws s3 cp --acl "$acl" packaged.template "s3://${BUCKET}/${project}/${version}/main.template"
+                      # Define paths
+                      path="${project}/${version}/$(basename $template)"
 
-                    url="https://s3.amazonaws.com/${BUCKET}/${project}/${version}/main.template"
+                      # Copy it to the bucket
+                      aws s3 cp --acl "$acl" packaged.template "s3://${BUCKET}/${path}"
 
-                    # Add an index
-                    echo "<!DOCTYPE html><html lang=\"en\"><body><p><a href=\"https://console.aws.amazon.com/cloudformation/home?region=${region}#/stacks/new?stackName=${project}&templateURL=${url}\"><img alt=\"Launch Stack\" src=\"https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png\" /></a></p></body></html>" >index.html
-                    aws s3 cp --acl "$acl" index.html "s3://${BUCKET}/${project}/${version}/index.html"
+                      # Sync to latest
+                      if [ "$version" != "latest" ]; then
+                        echo "Syncing $version to latest"
+                        aws s3 rm "s3://${BUCKET}/${project}/latest/$(basename $template)"
+                        aws s3 cp --acl "$acl" "s3://${BUCKET}/${path}" "s3://${BUCKET}/${project}/latest/$(basename $template)"
+                      fi
+                    done
 
                     # Add extra files
                     for extra_file in $extra_files; do
@@ -189,16 +204,97 @@ Resources:
                     # Set permissions of artefacts
                     objects=$(aws s3 ls --recursive "s3://${BUCKET}/${project}/${version}")
                     echo "$objects" | awk -v bucket="$BUCKET" -v acl="$acl" '{system("aws s3api put-object-acl --bucket " bucket " --key " $4 " --acl " acl)}'
-
-                    # Sync to latest
-                    if [ "$version" != "latest" ]; then
-                      echo "Syncing $version to latest"
-                      aws s3 rm --recursive "s3://${BUCKET}/${project}/{latest}"
-                      aws s3 cp --acl "$acl" "s3://${BUCKET}/${project}/${version}/main.template" "s3://${BUCKET}/${project}/latest/main.template"
-                    fi
-
-                    echo "https://${BUCKET}.s3-website-${region}.amazonaws.com/${project}/$version/index.html"
                   done
+
+                  # Create an index file in the first region's bucket
+                  for region in $regions; do
+                    first_region="$region"
+                    break
+                  done
+
+                  cat <<EOF >index.html
+                  <!DOCTYPE html>
+                  <html lang="en">
+                    <head>
+                      <title>${project}</title>
+                      <style>
+                        table {
+                          border-collapse: collapse;
+                        }
+                        table, th, td {
+                          border: 1px solid black;
+                        }
+                        th, td {
+                          text-align: center;
+                          padding: 0.5em;
+                        }
+                        p.footer {
+                          font-size: 75%;
+                        }
+                      </style>
+                    </head>
+                    <body>
+                      <h1>${project}</h1>
+                      <table>
+                        <tr>
+                          <th>Region</th>
+                  EOF
+
+                  for template in $templates; do
+                  cat <<EOF >>index.html
+                          <th>$(basename $template)</th>
+                  EOF
+                  done
+
+                  cat <<EOF >>index.html
+                        </tr>
+                  EOF
+
+                  for region in $regions; do
+                    export AWS_DEFAULT_REGION="${region}"
+                    export BUCKET="${bucket_name_prefix}-${region}"
+
+                    cat <<EOF >>index.html
+                        <tr>
+                          <th>${region}</th>
+                  EOF
+
+                    for template in $templates; do
+                      # Strip disallowed cfn stack name characters
+                      name=$(echo "${project}-${template%.*}" | sed -e 's/[^a-zA-Z0-9]\+/-/g')
+                      url="https://s3.amazonaws.com/${BUCKET}/${project}/${version}/$(basename $template)"
+
+                      cat <<EOF >>index.html
+                          <td>
+                            <a href="https://console.aws.amazon.com/cloudformation/home?region=${region}#/stacks/new?stackName=${name}&templateURL=${url}">
+                              <img alt="Launch Stack" src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png" />
+                            </a>
+                          </td>
+                  EOF
+                    done
+
+                    cat <<EOF >>index.html
+                        </tr>
+                  EOF
+                  done
+
+                  # Close the index file
+                  cat <<EOF >>index.html
+                      </table>
+                      <p class="footer">Generated by cfn-publish on $(date -u)</p>
+                    </body>
+                  </html>
+                  EOF
+
+                  # Upload the website
+                  export AWS_DEFAULT_REGION="${first_region}"
+                  export BUCKET="${bucket_name_prefix}-${first_region}"
+                  aws s3api put-bucket-website --bucket "$BUCKET" --website-configuration '{"IndexDocument": {"Suffix": "index.html"}}'
+                  aws s3 cp --acl "$acl" index.html "s3://${BUCKET}/${project}/${version}.html"
+                  aws s3 cp --acl "$acl" index.html "s3://${BUCKET}/${project}/index.html"
+
+                  echo "http://${BUCKET}.s3-website-${first_region}.amazonaws.com/${project}/index.html"
                   EOL
+
                 - chmod +x publish.sh
                 - . ./publish.sh
