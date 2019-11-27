@@ -257,11 +257,12 @@ Resources:
                   EOF
                   
                     for template in $templates; do
+                      name="${template%.*}"
                       url="https://s3.amazonaws.com/${BUCKET}/${project}/${version}/$(basename $template)"
                   
                       cat <<EOF >>index.html
                           <td>
-                            <a href="https://console.aws.amazon.com/cloudformation/home?region=${region}#/stacks/new?stackName=${project}&templateURL=${url}">
+                            <a href="https://console.aws.amazon.com/cloudformation/home?region=${region}#/stacks/new?stackName=${name}&templateURL=${url}">
                               <img alt="Launch Stack" src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png" />
                             </a>
                           </td>
