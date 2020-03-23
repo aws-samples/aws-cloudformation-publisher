@@ -11,6 +11,14 @@ script:
   - cfn-lint cfn.template
 
 before_deploy:
+  - mkdir -p ~/.aws
+  - |
+    cat >> ~/.aws/config <<EOF
+    [profile publisher]
+    credential_source=Environment
+    role_arn=${ROLE_ARN}
+    duration_seconds=900
+    EOF
   - LATEST_VERSION="$(git describe --abbrev=0 --tags 2> /dev/null || echo 'v0')"
   - NEXT_VERSION="v$((${LATEST_VERSION##*[^0-9]} + 1 ))"
   - export VERSION=${TRAVIS_TAG:-$NEXT_VERSION}
@@ -28,7 +36,7 @@ deploy:
       branch: master
       condition: type != pull_request
   - provider: script
-    script: aws s3 cp ./$VERSION.zip s3://$CFN_BUCKET/aws-cloudformation-publisher/$VERSION/aws-cloudformation-publisher.zip
+    script: aws s3 cp --profile publisher ./$VERSION.zip s3://$CFN_BUCKET/aws-cloudformation-publisher/$VERSION/aws-cloudformation-publisher.zip >/dev/null 2>&1
     skip_cleanup: true
     on:
       tags: true
