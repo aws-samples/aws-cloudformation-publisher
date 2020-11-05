@@ -1,0 +1,47 @@
+---
+
+name: Publish Version
+on:
+  release:
+    types: [created, edited]
+jobs:
+  publish:
+    name: Publish Version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Fetch Tags
+        run: git fetch --depth=1 origin +refs/tags/*:refs/tags/* || true
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.REGION }}
+          role-to-assume: ${{ secrets.AWS_PUBLISHER_ROLE_TO_ASSUME }}
+          role-duration-seconds: 900
+      - name: Set version
+        id: version
+        run: echo "VERSION=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_ENV
+      # Setup
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.8
+      # Cache
+      - uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      # Setup
+      - name: Install Python dependencies
+        run: pip3 install -r requirements.txt
+      # Package and Upload Archive
+      - name: Zip artefact
+        run: git archive HEAD -o $VERSION.zip
+      - name: Upload artefact
+        run: aws s3 cp ./$VERSION.zip s3://$CFN_BUCKET/aws-cloudformation-publisher/$VERSION/aws-cloudformation-publisher.zip >/dev/null 2>&1
+        env:
+          CFN_BUCKET: ${{ secrets.CFN_BUCKET }}

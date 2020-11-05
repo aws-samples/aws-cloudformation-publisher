@@ -1,0 +1,6 @@
+packaged.yaml
+__pycache__/
+.idea/
+*.pyc
+venv/
+.vscode/
