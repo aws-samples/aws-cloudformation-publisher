@@ -2,7 +2,7 @@
 
 AWS CloudFormation Publisher packages your CloudFormation templates into an S3 bucket in every AWS region and creates "launch stack" links that you can use in your documentation so that your customers can easily launch stacks in their AWS accounts from your CloudFormation templates.
 
-[![Build Status](https://travis-ci.org/aws-samples/aws-cloudformation-publisher.svg?branch=master)](https://travis-ci.org/aws-samples/aws-cloudformation-publisher)
+![Tests](https://github.com/aws-samples/aws-cloudformation-publisher/workflows/Tests/badge.svg?branch=master)
 
 ## Overview
 
@@ -31,7 +31,7 @@ To deploy, launch the AWS Cloudformation Publisher into your account:
 
 <details>
   <summary>More regions</summary>
-  
+
 |Region|Launch Template|
 |------|---------------|
 |**US West (N. California)** (us-west-1) | [![Launch the aws-cloudformation-publisher Stack with CloudFormation](docs/deploy-to-aws.png)](https://console.aws.amazon.com/cloudformation/home?region=us-west-1#/stacks/new?stackName=aws-cloudformation-publisher&templateURL=https://solution-builders-us-west-1.s3.us-west-1.amazonaws.com/aws-cloudformation-publisher/latest/main.template)|
@@ -54,7 +54,7 @@ AWS CloudFormation Publisher looks for a file in the root of your repository cal
 * The location of the CloudFormation template(s) in the repository that you wish to publish (the default is a single template called `cfn.template`)
 * The regions to publish to (the default is all regions)
 * The prefix to use in bucket names (the default is `cfn-<aws_account_id>`)
-* The ACL to use for uploaded artefacts (the default is `private` i.e. only IAM principals in your account who have explicitly been granted access to the bucket can launch the template) 
+* The ACL to use for uploaded artefacts (the default is `private` i.e. only IAM principals in your account who have explicitly been granted access to the bucket can launch the template)
 * The project name to prefix all artefact object keys with in S3 (if using a git source, the default is the repo name. if using an S3 object source, the default is file name, without it's extension)
 
 Your `cfn-publish.config`, if you need one, should look something like this:
@@ -83,7 +83,7 @@ You will see the S3 bucket and output CloudFormation template names in the build
 ## Notifications
 
 An SNS topic is created as part of the solution which you can subscribe to in order to receive
-notifications regarding publisher execution statuses. Notifications will be in the format: 
+notifications regarding publisher execution statuses. Notifications will be in the format:
 
 ```
 Publication of '<SOURCE_LOCATION>' has reached the status '<SUCCEEDED|FAILED|IN_PROGRESS|STOPPED|TIMED_OUT|STOPPED>'

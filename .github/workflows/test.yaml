@@ -1,0 +1,35 @@
+---
+
+name: Tests
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+jobs:
+  test:
+    name: Run All Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: git fetch --depth=1 origin +refs/tags/*:refs/tags/* || true
+      # Cache
+      - uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      # Setup
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.8
+      - name: Install python dependencies
+        run: pip3 install -r requirements.txt
+      - name: Run CFN Lint
+        run: cfn-lint template.yaml
